@@ -818,12 +818,12 @@ async function renderImage() {
   ctx.fillStyle = rainbowGradient(ctx, B + 30, 0, B + 230, 0); ctx.fillText(String(res.power), B + 30, fy + 178);
   const tx0 = B + 270;
   ctx.font = `bold 30px ${POP_FONT}`; ctx.fillStyle = '#330033';
-  ctx.fillText(fitText(ctx, `${shape.name}・半径 ${fmtKm(res.s * state.km)}`, W - tx0 - 40), tx0, fy + 70);
-  ctx.fillText(fitText(ctx, `中心: ${state.center.label || `${state.center.lat.toFixed(4)}, ${state.center.lng.toFixed(4)}`}`, W - tx0 - 40), tx0, fy + 116);
-  if (res.power >= 90) { ctx.fillStyle = '#ff0000'; ctx.fillText('ｷﾀ━━━(ﾟ∀ﾟ)━━━!!', tx0, fy + 162); }
+  ctx.fillText(fitText(ctx, `${shape.name}・半径 ${fmtKm(res.s * state.km)}`, W - tx0 - 40), tx0, fy + 62);
+  ctx.fillText(fitText(ctx, `中心: ${state.center.label || `${state.center.lat.toFixed(4)}, ${state.center.lng.toFixed(4)}`}`, W - tx0 - 40), tx0, fy + 104);
+  if (res.power >= 90) { ctx.fillStyle = '#ff0000'; ctx.fillText('ｷﾀ━━━(ﾟ∀ﾟ)━━━!!', tx0, fy + 146); }
   ctx.font = '20px sans-serif'; ctx.fillStyle = '#663366';
-  ctx.fillText(fitText(ctx, '地図: 国土地理院（地理院タイル） / 施設: © OpenStreetMap contributors', W - tx0 - 30), tx0, fy + 196);
-  ctx.fillText(fitText(ctx, (location.host + location.pathname).replace(/\/$/, ''), W - tx0 - 30), tx0, fy + 222);
+  ctx.fillText(fitText(ctx, '地図: 国土地理院（地理院タイル） / 施設: © OpenStreetMap contributors', W - tx0 - 30), tx0, fy + 178);
+  ctx.fillText(fitText(ctx, (location.host + location.pathname).replace(/\/$/, ''), W - tx0 - 30), tx0, fy + 204);
 
   // 区切りと外枠の虹
   ctx.fillStyle = rainbowGradient(ctx, 0, 0, W, 0);
