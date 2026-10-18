@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=20261019c">
+<link rel="stylesheet" href="style.css?v=20261019d">
 </head>
 <body>
 <div id="map" aria-label="地図"></div>
@@ -49,11 +49,12 @@
         <button id="nextBtn" type="button" class="icon-btn" aria-label="次の候補">›</button>
       </div>
     </div>
+    <button id="editBtn" type="button" class="make-btn"><span class="spark">★</span> 新しいパワースポットを作る <span class="spark">★</span><small>図形・大きさ・施設を選び直す</small></button>
     <p id="resultNote" class="result-note"></p>
     <ol id="vertexList" class="vertex-list"></ol>
     <div class="result-actions">
       <label class="toggle"><input id="idealToggle" type="checkbox"> 理想の図形を重ねる</label>
-      <span class="right"><button id="editBtn" type="button" class="ghost-btn">条件を変える</button><button id="saveBtn" type="button" class="ghost-btn">画像保存</button><button id="shareBtn" type="button" class="ghost-btn">共有</button></span>
+      <span class="right"><button id="saveBtn" type="button" class="ghost-btn">画像保存</button><button id="shareBtn" type="button" class="ghost-btn">共有</button></span>
     </div>
   </section>
 
@@ -113,6 +114,6 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=20261019c"></script>
+<script src="app.js?v=20261019d"></script>
 </body>
 </html>

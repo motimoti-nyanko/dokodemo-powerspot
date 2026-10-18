@@ -366,6 +366,24 @@ input[type=range] { width: 100%; accent-color: #ff3399; margin: 4px 0 8px; heigh
 .panel.mini .mini-btn::before { font-size: 12px; }
 @media (min-width: 860px) { #editBtn, .mini-btn { display: none; } }
 
+/* 新しく作り直すボタン（スマホの結果表示で一番目立たせる） */
+.make-btn {
+  display: block; width: 100%; margin: 6px 0 4px; padding: 9px 6px 7px;
+  font-family: var(--pop); font-size: 17px; color: #fff; letter-spacing: .02em;
+  background: var(--rainbow); background-size: 200% 100%; animation: rainbow-slide 3s linear infinite;
+  border: 3px outset #ffccff; border-radius: 10px;
+  text-shadow: 1px 1px 0 #330033, -1px -1px 0 #330033, 1px -1px 0 #330033, -1px 1px 0 #330033, 2px 2px 0 #330033;
+  box-shadow: 0 3px 0 #990066, 0 0 12px rgba(255, 102, 204, .8);
+}
+.make-btn:active { border-style: inset; transform: translateY(2px); box-shadow: 0 1px 0 #990066; }
+.make-btn small {
+  display: block; font-family: var(--font); font-size: 11px; font-weight: bold; margin-top: 2px; letter-spacing: 0;
+}
+.make-btn .spark { color: #ffff66; display: inline-block; animation: spin 2s linear infinite; }
+@media (max-width: 859px) {
+  .panel:not(.collapsed) .make-btn, .panel.mini .make-btn { display: none; }
+}
+
 /* ---------- 画像のプレビュー ---------- */
 .img-modal {
   position: fixed; inset: 0; z-index: 2500; background: rgba(51, 0, 51, .75);
