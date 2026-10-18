@@ -381,7 +381,7 @@ input[type=range] { width: 100%; accent-color: #ff3399; margin: 4px 0 8px; heigh
 }
 .make-btn .spark { color: #ffff66; display: inline-block; animation: spin 2s linear infinite; }
 @media (max-width: 859px) {
-  .panel:not(.collapsed) .make-btn, .panel.mini .make-btn { display: none; }
+  .panel:not(.collapsed) #editBtn, .panel.mini #editBtn { display: none; }
 }
 
 /* ---------- 画像のプレビュー ---------- */
@@ -404,4 +404,45 @@ input[type=range] { width: 100%; accent-color: #ff3399; margin: 4px 0 8px; heigh
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .sparkle { display: none; }
+}
+
+/* ---------- スマホの設定画面: 小さく詰めて地図を広く、下に「決定」ボタン ---------- */
+.sheet-footer { display: none; }
+@media (max-width: 859px) {
+  .panel:not(.collapsed) { max-height: 50vh; }
+  .panel:not(.collapsed) .brand,
+  .panel:not(.collapsed) .marquee,
+  .panel:not(.collapsed) .power-kita { display: none; }
+  .panel:not(.collapsed) .result { padding: 2px 8px; margin-bottom: 2px; }
+  .panel:not(.collapsed) .power-value { font-size: 22px; }
+  .panel:not(.collapsed) .power-label { font-size: 11px; }
+  .panel:not(.collapsed) .icon-btn { width: 28px; height: 28px; font-size: 18px; }
+  .panel:not(.collapsed) .mini-btn { display: none; }
+
+  .panel:not(.collapsed) .sheet-footer {
+    display: block; flex: none; padding: 6px 12px 6px;
+    border-top: 3px solid transparent; border-image: var(--rainbow) 1; background: rgba(255, 246, 253, .95);
+  }
+  .sheet-footer .make-btn { margin: 0; padding: 7px 6px 5px; font-size: 16px; }
+  .sheet-footer .make-btn small { font-size: 10px; margin-top: 0; }
+
+  .panel-body { padding: 0 10px 10px; }
+  .field { margin: 6px 0; padding: 0 6px 6px; }
+  .field h2 { margin: 0 -6px 6px; padding: 2px 6px; font-size: 12px; }
+  .size-value { font-size: 13px; }
+  .center-label { font-size: 13px; }
+  .ghost-btn { padding: 4px 8px; font-size: 12px; }
+
+  /* 図形は 8 個を 1 行に */
+  .shape-list { grid-template-columns: repeat(8, 1fr); gap: 3px; }
+  .shape-btn { padding: 3px 0 2px; font-size: 9px; letter-spacing: -.05em; }
+  .shape-btn svg { width: 22px; height: 22px; }
+
+  input[type=range] { height: 22px; margin: 0 0 4px; }
+  .presets button, .segmented button { padding: 4px 0; font-size: 12px; }
+  .genre-group { margin-bottom: 5px; }
+  .genre-group h3 { font-size: 11px; margin-bottom: 3px; }
+  .genre-chips { gap: 4px; }
+  .chip { padding: 3px 7px 3px 5px; font-size: 12px; }
+  .chip .em { font-size: 13px; }
 }

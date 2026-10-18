@@ -598,6 +598,7 @@ function buildUi() {
   $('shareBtn').addEventListener('click', share);
   $('saveBtn').addEventListener('click', saveImage);
   $('editBtn').addEventListener('click', () => { setCollapsed(false); document.querySelector('.panel-body').scrollTop = 0; });
+  $('doneBtn').addEventListener('click', () => setSheet(1));
 
   // バーは上下にドラッグで段階を切り替え、タップで 地図最大→結果→設定→結果 の順に
   let dragY = null;
