@@ -334,15 +334,52 @@ input[type=range] { width: 100%; accent-color: #ff3399; margin: 4px 0 8px; heigh
   .toast { left: calc(50% + var(--panel-w) / 2); }
 }
 
-/* モバイルでシートを広げているときは結果を見出しだけにして、設定を広く見せる */
+/* ---------- スマホ: 地図を広く ---------- */
 @media (max-width: 859px) {
+  .brand { padding-bottom: 2px; }
+  .brand h1 { font-size: 19px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .brand .badge { font-size: 9px; }
+  .marquee { font-size: 12px; margin-bottom: 4px; }
+  .result { margin-bottom: 4px; padding: 4px 8px 6px; }
+  .power-value { font-size: 32px; }
+  .icon-btn { width: 34px; height: 34px; }
+  .vertex-list li { padding: 5px 2px; }
+
+  /* 設定を開いているときは結果を見出しだけに（図形が作れなかったときの説明は残す） */
   .panel:not(.collapsed) .result .vertex-list,
-  .panel:not(.collapsed) .result-note,
+  .panel:not(.collapsed) .result-note:not(.warn),
   .panel:not(.collapsed) .result-actions { display: none; }
-  .panel:not(.collapsed) .result { padding-bottom: 6px; }
+  .panel:not(.collapsed) .result { padding-bottom: 4px; }
   .panel.collapsed .marquee { display: none; }
+  .panel.collapsed { max-height: 33vh; }
+
+  /* 地図を最大に: バーとパワーの行だけ残す */
+  .panel.mini { max-height: none; }
+  .panel.mini .brand, .panel.mini .result-note, .panel.mini .vertex-list, .panel.mini .result-actions { display: none; }
+  .panel.mini .result { margin-top: 0; }
+  .panel.mini .power-kita { display: none; }
 }
-@media (min-width: 860px) { #editBtn { display: none; } }
+.mini-btn { padding: 4px 6px; font-size: 12px; }
+.panel.mini .mini-btn::before { content: "▲結果"; }
+.panel.mini .mini-btn { font-size: 0; }
+.panel.mini .mini-btn::before { font-size: 12px; }
+@media (min-width: 860px) { #editBtn, .mini-btn { display: none; } }
+
+/* ---------- 画像のプレビュー ---------- */
+.img-modal {
+  position: fixed; inset: 0; z-index: 2500; background: rgba(51, 0, 51, .75);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.img-box {
+  background: var(--tile); border: 4px ridge #ff66cc; padding: 10px; max-width: 520px; width: 100%;
+  max-height: 100%; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow);
+}
+.img-title { margin: 0; text-align: center; font-family: var(--pop); color: #cc0066; font-size: 17px; }
+.img-box img { width: 100%; min-height: 0; object-fit: contain; border: 2px solid #fff; background: #fff; flex: 1 1 auto; }
+.img-hint { margin: 0; font-size: 11px; color: var(--ink-2); text-align: center; }
+.img-actions { display: flex; gap: 8px; justify-content: center; }
+.img-actions .ghost-btn { flex: 1; padding: 10px 0; font-size: 15px; }
 .result-actions .right { display: flex; gap: 6px; }
 
 /* 動きを減らす設定の人には止める */

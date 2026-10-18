@@ -304,7 +304,7 @@ function fitShape(P, shape, R, tol) {
 }
 
 // ---------------- 地図 ----------------
-const map = L.map('map', { zoomControl: false, minZoom: 4, maxZoom: 18, worldCopyJump: false })
+const map = L.map('map', { zoomControl: false, zoomSnap: 0.5, minZoom: 4, maxZoom: 18, worldCopyJump: false })
   .setView([36.2, 137.8], 5);
 const gsiAttr = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> | 施設 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 const baseLayers = {
@@ -313,6 +313,8 @@ const baseLayers = {
   '航空写真': L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { attribution: gsiAttr, maxZoom: 18 }),
 };
 baseLayers['淡色地図'].addTo(map);
+let currentBase = '淡色地図';
+map.on('baselayerchange', e => { currentBase = e.name; });
 L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
 L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
 map.attributionControl.setPrefix(false);
@@ -320,7 +322,9 @@ map.attributionControl.setPrefix(false);
 const shapeLayer = L.layerGroup().addTo(map);
 let centerMarker = null;
 
-const PIN_SVG = '<svg viewBox="0 0 30 38"><path d="M15 37C15 37 2 22.5 2 14a13 13 0 0 1 26 0c0 8.5-13 23-13 23z" fill="#fff" stroke="#c8341c" stroke-width="2"/><path d="M15 21.5s-6.2-3.9-6.2-8a3.4 3.4 0 0 1 6.2-1.9 3.4 3.4 0 0 1 6.2 1.9c0 4.1-6.2 8-6.2 8z" fill="#e8455f"/></svg>';
+const PIN_PATH = 'M15 37C15 37 2 22.5 2 14a13 13 0 0 1 26 0c0 8.5-13 23-13 23z';
+const HEART_PATH = 'M15 21.5s-6.2-3.9-6.2-8a3.4 3.4 0 0 1 6.2-1.9 3.4 3.4 0 0 1 6.2 1.9c0 4.1-6.2 8-6.2 8z';
+const PIN_SVG = `<svg viewBox="0 0 30 38"><path d="${PIN_PATH}" fill="#fff" stroke="#c8341c" stroke-width="2"/><path d="${HEART_PATH}" fill="#e8455f"/></svg>`;
 const pinIcon = L.divIcon({ className: 'v-pin', html: PIN_SVG, iconSize: [30, 38], iconAnchor: [15, 37], popupAnchor: [0, -34], tooltipAnchor: [0, -36] });
 const centerIcon = L.divIcon({ className: 'c-pin', html: '<div></div>', iconSize: [22, 22], iconAnchor: [11, 11] });
 
@@ -396,6 +400,7 @@ async function run(refit) {
 }
 
 function showMessage(msg) {
+  if (sheetLevel() === 0) setSheet(1);
   $('result').hidden = false;
   $('panel').classList.remove('no-result');
   $('powerValue').textContent = '-';
@@ -530,12 +535,24 @@ function readUrl() {
 }
 
 // ---------------- UI ----------------
+// スマホのシートは 3 段階: 0 = 地図を最大に（パワーだけ）, 1 = 結果, 2 = 条件の設定
 let sheetAnimUntil = 0;
-function setCollapsed(v) {
+function sheetLevel() {
   const p = $('panel');
-  if (p.classList.contains('collapsed') !== v) sheetAnimUntil = Date.now() + 280;
-  p.classList.toggle('collapsed', v); setTimeout(syncSheetVar, 260); syncSheetVar();
+  return p.classList.contains('mini') ? 0 : p.classList.contains('collapsed') ? 1 : 2;
 }
+function setSheet(level) {
+  const p = $('panel');
+  const changed = sheetLevel() !== level;
+  if (changed) sheetAnimUntil = Date.now() + 280;
+  p.classList.toggle('collapsed', level < 2);
+  p.classList.toggle('mini', level === 0);
+  setTimeout(syncSheetVar, 260); syncSheetVar();
+  // 地図が広くなったら図形が画面に収まるよう合わせ直す
+  if (changed && level < 2 && !isDesktop() && state.results[state.alt]) setTimeout(fitToShape, 290);
+}
+// true: 設定を閉じる（地図を最大にしている状態はそのまま）、false: 設定を開く
+function setCollapsed(v) { setSheet(v ? Math.min(sheetLevel(), 1) : 2); }
 
 function buildUi() {
   const sl = $('shapeList');
@@ -579,10 +596,25 @@ function buildUi() {
   $('nextBtn').addEventListener('click', () => { if (state.alt < state.results.length - 1) { state.alt++; showResult(); updateUrl(); } });
   $('idealToggle').addEventListener('change', e => { state.showIdeal = e.target.checked; draw(); });
   $('shareBtn').addEventListener('click', share);
+  $('saveBtn').addEventListener('click', saveImage);
   $('editBtn').addEventListener('click', () => setCollapsed(false));
 
-  $('handle').addEventListener('click', () => setCollapsed(!$('panel').classList.contains('collapsed')));
-  document.querySelector('.brand').addEventListener('click', () => { if (!isDesktop()) setCollapsed(!$('panel').classList.contains('collapsed')); });
+  // バーは上下にドラッグで段階を切り替え、タップで 地図最大→結果→設定→結果 の順に
+  let dragY = null;
+  const handle = $('handle');
+  handle.addEventListener('pointerdown', e => { dragY = e.clientY; handle.setPointerCapture(e.pointerId); });
+  handle.addEventListener('pointerup', e => {
+    if (dragY === null) return;
+    const dy = e.clientY - dragY; dragY = null;
+    const lv = sheetLevel();
+    if (dy > 30) setSheet(Math.max(0, lv - 1));
+    else if (dy < -30) setSheet(Math.min(2, lv + 1));
+    else setSheet(lv === 2 ? 1 : lv + 1);
+  });
+  handle.addEventListener('pointercancel', () => { dragY = null; });
+  handle.addEventListener('click', e => { if (e.detail === 0) { const lv = sheetLevel(); setSheet(lv === 2 ? 1 : lv + 1); } }); // キーボード操作
+  $('miniBtn').addEventListener('click', () => setSheet(sheetLevel() === 0 ? 1 : 0));
+  document.querySelector('.brand').addEventListener('click', () => { if (!isDesktop()) setSheet(sheetLevel() === 2 ? 1 : 2); });
 
   $('locateBtn').addEventListener('click', () => {
     if (!navigator.geolocation) { toast('この端末では現在地を取得できません'); return; }
@@ -647,6 +679,200 @@ function syncUi(fromSlider) {
   document.querySelectorAll('#tolList button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.tol === state.tol)));
   if (!fromSlider) $('sizeRange').value = kmToSlider(state.km);
   $('sizeValue').textContent = '半径 ' + fmtKm(state.km);
+}
+
+// ---------------- 画像の保存 ----------------
+// 地図タイル・図形・タイトルを 1 枚の canvas に描く（1080×1480）
+const TILE_URLS = {
+  '淡色地図': 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+  '標準地図': 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+  '航空写真': 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+};
+const RAINBOW = ['#ff0040', '#ff9900', '#ffee00', '#33dd00', '#00ccff', '#3355ff', '#cc00ff'];
+const POP_FONT = '"HGP創英角ﾎﾟｯﾌﾟ体", "Mochiy Pop One", sans-serif';
+
+function mercator(lat, lng, z) {
+  const size = 256 * Math.pow(2, z), s = Math.sin(lat * Math.PI / 180);
+  return [(lng + 180) / 360 * size, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * size];
+}
+function loadImage(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+function rainbowGradient(ctx, x0, y0, x1, y1) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  RAINBOW.forEach((c, i) => g.addColorStop(i / (RAINBOW.length - 1), c));
+  return g;
+}
+function fitText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  while (text.length > 1 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1);
+  return text + '…';
+}
+
+async function renderImage() {
+  const P = state.P, res = state.results[state.alt], shape = SHAPE[state.shape];
+  const W = 1080, HEAD = 190, MAPH = 1060, FOOT = 230, H = HEAD + MAPH + FOOT, B = 14;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  try { await document.fonts.load(`40px ${POP_FONT}`, 'どこでもパワースポット0123456789'); } catch { /* 代替フォントで描く */ }
+
+  // 図形が収まるズームを決める
+  const pts = res.idx.map(i => [P.lat[i], P.lng[i]]);
+  const all = pts.concat([[state.center.lat, state.center.lng]]);
+  const m0 = all.map(([la, lo]) => mercator(la, lo, 0));
+  const xs = m0.map(p => p[0]), ys = m0.map(p => p[1]);
+  const spanX = Math.max(1e-9, Math.max(...xs) - Math.min(...xs)), spanY = Math.max(1e-9, Math.max(...ys) - Math.min(...ys));
+  const z = Math.max(4, Math.min(17.5, Math.log2(Math.min((W - 300) / spanX, (MAPH - 300) / spanY))));
+  const tz = Math.max(2, Math.min(18, Math.round(z))), scale = Math.pow(2, z - tz), k = Math.pow(2, z);
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2 * k, cy = (Math.max(...ys) + Math.min(...ys)) / 2 * k + 25;
+  const toImg = (la, lo) => { const [x, y] = mercator(la, lo, z); return [x - cx + W / 2, y - cy + MAPH / 2 + HEAD]; };
+
+  // 地図タイル
+  ctx.fillStyle = '#e8f0ff'; ctx.fillRect(0, HEAD, W, MAPH);
+  const tsz = 256 * scale, left = cx - W / 2, top = cy - MAPH / 2, n = Math.pow(2, tz);
+  const jobs = [];
+  for (let ty = Math.floor(top / tsz); ty <= Math.floor((top + MAPH) / tsz); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor(left / tsz); tx <= Math.floor((left + W) / tsz); tx++) {
+      const url = TILE_URLS[currentBase].replace('{z}', tz).replace('{x}', ((tx % n) + n) % n).replace('{y}', ty);
+      jobs.push(loadImage(url).then(img => ({ img, tx, ty })));
+    }
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(0, HEAD, W, MAPH); ctx.clip();
+  for (const { img, tx, ty } of await Promise.all(jobs)) {
+    if (img) ctx.drawImage(img, tx * tsz - left, ty * tsz - top + HEAD, tsz + 0.5, tsz + 0.5);
+  }
+
+  // 虹色の図形
+  const ip = pts.map(([la, lo]) => toImg(la, lo));
+  const cyc = cycles(shape.n, shape.step);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 16;
+  cyc.forEach(c => { ctx.beginPath(); c.forEach((kk, j) => j ? ctx.lineTo(...ip[kk]) : ctx.moveTo(...ip[kk])); ctx.closePath(); ctx.stroke(); });
+  let seg = 0;
+  ctx.lineWidth = 9;
+  cyc.forEach(c => c.forEach((kk, j) => {
+    ctx.strokeStyle = `hsl(${Math.round(seg++ * 360 / shape.n)}, 100%, 48%)`;
+    ctx.beginPath(); ctx.moveTo(...ip[kk]); ctx.lineTo(...ip[c[(j + 1) % c.length]]); ctx.stroke();
+  }));
+
+  // 中心の印
+  const [ccx, ccy] = toImg(state.center.lat, state.center.lng);
+  if (ctx.createConicGradient) {
+    const g = ctx.createConicGradient(0, ccx, ccy);
+    RAINBOW.concat(RAINBOW[0]).forEach((c, i) => g.addColorStop(i / RAINBOW.length, c));
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = '#ff3399';
+  ctx.beginPath(); ctx.arc(ccx, ccy, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ccx, ccy, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ff3399'; ctx.font = `20px ${POP_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('★', ccx, ccy + 1);
+
+  // ハートのピンと名前
+  const pin = new Path2D(PIN_PATH), heart = new Path2D(HEART_PATH), ps = 1.7;
+  ip.forEach(([x, y], k) => {
+    ctx.save(); ctx.translate(x - 15 * ps, y - 37 * ps); ctx.scale(ps, ps);
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
+    ctx.fillStyle = '#fff'; ctx.fill(pin); ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2; ctx.strokeStyle = '#c8341c'; ctx.stroke(pin);
+    ctx.fillStyle = '#e8455f'; ctx.fill(heart);
+    ctx.restore();
+    ctx.font = `26px ${POP_FONT}`;
+    const label = fitText(ctx, P.name[res.idx[k]], 360);
+    const tw = ctx.measureText(label).width + 20, th = 40;
+    const lx = Math.min(W - B - tw - 4, Math.max(B + 4, x - tw / 2)), ly = Math.max(HEAD + 6, y - 37 * ps - th - 6);
+    ctx.fillStyle = '#ffffcc'; ctx.fillRect(lx, ly, tw, th);
+    ctx.lineWidth = 3; ctx.strokeStyle = '#ff3399'; ctx.strokeRect(lx, ly, tw, th);
+    ctx.fillStyle = '#cc0066'; ctx.textAlign = 'left'; ctx.fillText(label, lx + 10, ly + th / 2 + 1);
+  });
+  ctx.restore();
+
+  // ヘッダー（星柄にタイトル）
+  ctx.fillStyle = '#fff6fd'; ctx.fillRect(0, 0, W, HEAD);
+  ctx.font = `26px ${POP_FONT}`; ctx.textAlign = 'center';
+  for (let i = 0; i < 26; i++) {
+    ctx.fillStyle = ['#ffcc00', '#ff99cc', '#99ccff', '#cc99ff'][i % 4];
+    ctx.fillText(i % 2 ? '☆' : '★', (i * 83 + 30) % W, 30 + ((i * 53) % (HEAD - 50)));
+  }
+  ctx.font = `76px ${POP_FONT}`; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 14; ctx.strokeStyle = '#660066'; ctx.strokeText('どこでもパワースポット', W / 2 + 4, 92 + 4);
+  ctx.lineWidth = 10; ctx.strokeStyle = '#fff'; ctx.strokeText('どこでもパワースポット', W / 2, 92);
+  ctx.fillStyle = rainbowGradient(ctx, 80, 0, W - 80, 0); ctx.fillText('どこでもパワースポット', W / 2, 92);
+  ctx.font = `bold 26px ${POP_FONT}`; ctx.fillStyle = '#cc0066';
+  ctx.fillText('★☆ キミだけのパワースポット ☆★', W / 2, 160);
+
+  // フッター（パワーと情報）
+  const fy = HEAD + MAPH;
+  ctx.fillStyle = '#fff6fd'; ctx.fillRect(0, fy, W, FOOT);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `34px ${POP_FONT}`; ctx.fillStyle = '#cc0066'; ctx.fillText('★パワー★', B + 30, fy + 70);
+  ctx.font = `112px ${POP_FONT}`;
+  ctx.lineWidth = 10; ctx.strokeStyle = '#660066'; ctx.strokeText(String(res.power), B + 30, fy + 182);
+  ctx.fillStyle = rainbowGradient(ctx, B + 30, 0, B + 230, 0); ctx.fillText(String(res.power), B + 30, fy + 178);
+  const tx0 = B + 270;
+  ctx.font = `bold 30px ${POP_FONT}`; ctx.fillStyle = '#330033';
+  ctx.fillText(fitText(ctx, `${shape.name}・半径 ${fmtKm(res.s * state.km)}`, W - tx0 - 40), tx0, fy + 70);
+  ctx.fillText(fitText(ctx, `中心: ${state.center.label || `${state.center.lat.toFixed(4)}, ${state.center.lng.toFixed(4)}`}`, W - tx0 - 40), tx0, fy + 116);
+  if (res.power >= 90) { ctx.fillStyle = '#ff0000'; ctx.fillText('ｷﾀ━━━(ﾟ∀ﾟ)━━━!!', tx0, fy + 162); }
+  ctx.font = '20px sans-serif'; ctx.fillStyle = '#663366';
+  ctx.fillText(fitText(ctx, '地図: 国土地理院（地理院タイル） / 施設: © OpenStreetMap contributors', W - tx0 - 30), tx0, fy + 196);
+  ctx.fillText(fitText(ctx, (location.host + location.pathname).replace(/\/$/, ''), W - tx0 - 30), tx0, fy + 222);
+
+  // 区切りと外枠の虹
+  ctx.fillStyle = rainbowGradient(ctx, 0, 0, W, 0);
+  ctx.fillRect(0, HEAD - 6, W, 6); ctx.fillRect(0, fy, W, 6);
+  ctx.lineWidth = B; ctx.strokeStyle = rainbowGradient(ctx, 0, 0, W, H); ctx.strokeRect(B / 2, B / 2, W - B, H - B);
+  return cv;
+}
+
+async function saveImage() {
+  if (!state.results[state.alt]) { toast('先に図形を作ってね'); return; }
+  toast('画像を作っています…', 10000);
+  let blob;
+  try {
+    const cv = await renderImage();
+    blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('blob');
+  } catch (e) { console.error(e); toast('画像を作れませんでした'); return; }
+  $('toast').classList.remove('show');
+  const d = new Date(), pad = v => String(v).padStart(2, '0');
+  const name = `powerspot_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
+  showImageModal(blob, name);
+}
+
+// できた画像を見せて、そこから保存してもらう（iPhone は共有シート、ほかはダウンロード）
+function showImageModal(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const wrap = document.createElement('div');
+  wrap.className = 'img-modal';
+  wrap.innerHTML = `<div class="img-box" role="dialog" aria-label="画像の保存">
+      <p class="img-title">★☆ 画像ができたよ！ ☆★</p>
+      <img src="${url}" alt="パワースポットの画像">
+      <p class="img-hint">うまく保存できないときは、画像を長押しして保存してね</p>
+      <div class="img-actions"><button type="button" class="ghost-btn img-save">画像を保存</button><button type="button" class="ghost-btn img-close">閉じる</button></div>
+    </div>`;
+  const close = () => { wrap.remove(); URL.revokeObjectURL(url); };
+  wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+  wrap.querySelector('.img-close').addEventListener('click', close);
+  wrap.querySelector('.img-save').addEventListener('click', async () => {
+    const file = new File([blob], name, { type: 'image/png' });
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('画像を保存しました');
+  });
+  document.body.appendChild(wrap);
 }
 
 async function share() {
