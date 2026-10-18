@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>どこでもパワースポット</title>
+<meta name="description" content="地図上の好きな場所を、神社・お寺・コンビニなど実在の施設を頂点にした五芒星や六芒星で囲む。あなただけのパワースポットを見つけよう。">
+<meta name="theme-color" content="#ff3399">
+<meta property="og:title" content="どこでもパワースポット">
+<meta property="og:description" content="好きな場所を、実在の施設を頂点にした五芒星で囲もう。">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="地図"></div>
+
+<form id="search" class="search" role="search" autocomplete="off">
+  <input id="searchInput" type="search" placeholder="地名・駅名・住所で中心を探す" enterkeyhint="search" aria-label="場所を検索">
+  <button type="submit" aria-label="検索"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>検索!!</button>
+  <ul id="searchResults" class="search-results" hidden></ul>
+</form>
+
+<div id="hint" class="hint">地図をタップして、囲みたい場所（中心）を決めよう</div>
+
+<aside id="panel" class="panel">
+  <button id="handle" class="handle" type="button" aria-label="パネルを開閉"><span></span></button>
+
+  <header class="brand">
+    <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff0040"/><stop offset=".2" stop-color="#ff9900"/><stop offset=".4" stop-color="#ffee00"/><stop offset=".6" stop-color="#33dd00"/><stop offset=".8" stop-color="#00ccff"/><stop offset="1" stop-color="#cc00ff"/></linearGradient></defs>
+      <polygon points="50,8 77,91 6,40 94,40 23,91" fill="#ffff99" stroke="url(#rb)" stroke-width="9" stroke-linejoin="round"/>
+    </svg>
+    <h1 class="rainbow-text">どこでもパワースポット</h1>
+    <span class="badge blink">NEW!</span>
+  </header>
+  <marquee class="marquee" scrollamount="4">☆★☆ ようこそ！どこでもパワースポットへ ☆★☆　地図をタップして、キミだけのパワースポットを作っちゃおう！！　全国37万件の施設に対応だよ♪　リンクフリーです(^o^)/</marquee>
+
+  <section id="result" class="result" hidden>
+    <div class="result-head">
+      <div class="power"><span class="power-label">パワー</span><span id="powerValue" class="power-value">-</span><span class="power-kita">ｷﾀ━━━(ﾟ∀ﾟ)━━━!!</span></div>
+      <div class="result-nav">
+        <button id="prevBtn" type="button" class="icon-btn" aria-label="前の候補">‹</button>
+        <span id="altLabel" class="alt-label">1 / 1</span>
+        <button id="nextBtn" type="button" class="icon-btn" aria-label="次の候補">›</button>
+      </div>
+    </div>
+    <p id="resultNote" class="result-note"></p>
+    <ol id="vertexList" class="vertex-list"></ol>
+    <div class="result-actions">
+      <label class="toggle"><input id="idealToggle" type="checkbox"> 理想の図形を重ねる</label>
+      <span class="right"><button id="editBtn" type="button" class="ghost-btn">条件を変える</button><button id="shareBtn" type="button" class="ghost-btn">共有</button></span>
+    </div>
+  </section>
+
+  <div class="panel-body">
+    <section class="field">
+      <h2>中心</h2>
+      <div class="center-row">
+        <span id="centerLabel" class="center-label">未指定（地図をタップ）</span>
+        <button id="locateBtn" type="button" class="ghost-btn">現在地</button>
+        <button id="mapCenterBtn" type="button" class="ghost-btn">画面中央</button>
+      </div>
+    </section>
+
+    <section class="field">
+      <h2>図形</h2>
+      <div id="shapeList" class="shape-list" role="radiogroup" aria-label="図形"></div>
+    </section>
+
+    <section class="field">
+      <h2>大きさ <output id="sizeValue" class="size-value">半径 10 km</output></h2>
+      <input id="sizeRange" type="range" min="0" max="1000" step="1" aria-label="大きさ">
+      <div class="presets" id="sizePresets">
+        <button type="button" data-km="1">徒歩圏</button>
+        <button type="button" data-km="5">街</button>
+        <button type="button" data-km="25">市</button>
+        <button type="button" data-km="80">県</button>
+        <button type="button" data-km="200">地方</button>
+      </div>
+    </section>
+
+    <section class="field">
+      <h2>形のゆるさ</h2>
+      <div class="segmented" id="tolList">
+        <button type="button" data-tol="0.08">きっちり</button>
+        <button type="button" data-tol="0.2">ふつう</button>
+        <button type="button" data-tol="0.35">ゆるめ</button>
+      </div>
+    </section>
+
+    <section class="field">
+      <h2>頂点にする施設 <span class="sub">複数選べます</span> <button id="clearGenres" type="button" class="link-btn">すべて解除</button></h2>
+      <div id="genreList" class="genre-list"></div>
+    </section>
+
+    <footer class="credits">
+      <div class="counter">あなたは<b id="visitCount">000001</b>回目の訪問です</div>
+      <span class="since">Since 2026.10.18</span>　リンクフリー♪　キリ番踏んだら自慢してね☆
+      <hr>
+      地図:<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a> ／
+      施設データ: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL)
+      <span id="dataDate"></span><br>
+      計算はすべてお使いの端末の中で行われます。結果はおあそびです。
+    </footer>
+  </div>
+</aside>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
